@@ -75,7 +75,7 @@
             text-shadow: 0 0 8px #0088ff;
         }
 
-        /* เวลาหมดอายุ */
+        /* เวลาหมดอายุ (เปลี่ยนเป็นสีฟ้าตามคำขอ) */
         .timer-box {
             font-size: 18px;
             margin-bottom: 25px;
@@ -84,8 +84,8 @@
         .timer-box span {
             font-size: 26px;
             font-weight: bold;
-            color: #ff3366;
-            text-shadow: 0 0 10px rgba(255, 51, 102, 0.6);
+            color: #00e5ff; /* เปลี่ยนจากสีแดงเป็นสีฟ้าเรืองแสง */
+            text-shadow: 0 0 10px rgba(0, 229, 255, 0.6);
             display: block;
             margin-top: 5px;
         }
@@ -112,6 +112,72 @@
             transform: translateY(1px);
         }
 
+        /* ===== ระบบแจ้งเตือน Popup สไตล์ SweetAlert ===== */
+        .modal-overlay {
+            display: none; /* ซ่อนไว้ก่อน */
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-box {
+            background: white;
+            color: #333;
+            padding: 30px 40px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            min-width: 250px;
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        /* วาดไอคอนติ๊กถูกสีเขียว */
+        .modal-icon {
+            width: 70px; height: 70px;
+            border: 4px solid #a5dc86;
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            position: relative;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .modal-icon::after {
+            content: '';
+            width: 20px; height: 40px;
+            border: solid #a5dc86;
+            border-width: 0 4px 4px 0;
+            transform: rotate(45deg);
+            margin-bottom: 8px;
+        }
+        .modal-title {
+            font-size: 26px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #595959;
+        }
+        .modal-text {
+            font-size: 16px;
+            color: #545454;
+            margin-bottom: 30px;
+        }
+        .modal-btn {
+            background: #7066e0; /* สีม่วงอมน้ำเงินแบบในภาพ */
+            color: white;
+            border: none;
+            padding: 12px 35px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .modal-btn:hover {
+            background: #5c52cc;
+        }
     </style>
 </head>
 <body>
@@ -133,33 +199,37 @@
         <button class="copy-btn" id="copyBtn" onclick="copyKey()">📋 คัดลอกคีย์</button>
     </div>
 
+    <div class="modal-overlay" id="successModal">
+        <div class="modal-box">
+            <div class="modal-icon"></div>
+            <div class="modal-title">สำเร็จ</div>
+            <div class="modal-text">คัดลอกสำเร็จ !</div>
+            <button class="modal-btn" onclick="closeModal()">OK</button>
+        </div>
+    </div>
+
     <script>
         let currentKey = "";
 
         function updateSystem() {
             const now = new Date();
-            // กำหนดความยาวรอบละ 8 ชั่วโมง (หน่วยมิลลิวินาที)
             const interval = 8 * 60 * 60 * 1000; 
             const timeSinceEpoch = now.getTime();
             
-            // คำนวณว่าตอนนี้อยู่บล็อกเวลาไหน และเวลาบล็อกต่อไปคือตอนไหน
             const currentBlock = Math.floor(timeSinceEpoch / interval);
             const nextBlockTime = (currentBlock + 1) * interval;
             const timeLeft = nextBlockTime - timeSinceEpoch;
 
-            // สร้างคีย์จากเวลาบล็อกปัจจุบัน (รหัสจะเหมือนกันตลอด 8 ชม.)
             let hash = 0;
             let str = "TESTHUB_SUPER_SECRET_" + currentBlock;
             for (let i = 0; i < str.length; i++) {
                 hash = (hash << 5) - hash + str.charCodeAt(i);
                 hash |= 0; 
             }
-            // แปลงเป็นตัวอักษรและตัวเลข
             const randomPart = Math.abs(hash).toString(16).toUpperCase().padStart(8, '0');
             currentKey = "TESTHUB-" + randomPart;
             document.getElementById("keyDisplay").innerText = currentKey;
 
-            // แปลงเวลาที่เหลือเป็น ชั่วโมง:นาที:วินาที
             const h = Math.floor((timeLeft / (1000 * 60 * 60)) % 24);
             const m = Math.floor((timeLeft / 1000 / 60) % 60);
             const s = Math.floor((timeLeft / 1000) % 60);
@@ -170,22 +240,20 @@
                 String(s).padStart(2, '0');
         }
 
-        // ฟังก์ชันกดปุ่มคัดลอก
+        // ฟังก์ชันคัดลอกและเปิด Popup
         function copyKey() {
+            // คัดลอกคีย์ลงเครื่องทันที
             navigator.clipboard.writeText(currentKey).then(() => {
-                const btn = document.getElementById("copyBtn");
-                btn.innerText = "✅ คัดลอกคีย์สำเร็จ!";
-                btn.style.background = "linear-gradient(90deg, #00b09b, #96c93d)";
-                
-                // คืนค่าปุ่มกลับไปเหมือนเดิมหลังจาก 2 วินาที
-                setTimeout(() => {
-                    btn.innerText = "📋 คัดลอกคีย์";
-                    btn.style.background = "linear-gradient(90deg, #0072ff, #00c6ff)";
-                }, 2000);
+                // แสดงหน้าต่างแจ้งเตือน
+                document.getElementById("successModal").style.display = "flex";
             });
         }
 
-        // สั่งให้อัปเดตเวลาและคีย์ทุกๆ 1 วินาที
+        // ฟังก์ชันปิด Popup
+        function closeModal() {
+            document.getElementById("successModal").style.display = "none";
+        }
+
         updateSystem();
         setInterval(updateSystem, 1000);
     </script>
