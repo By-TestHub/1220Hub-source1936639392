@@ -1,32 +1,193 @@
 <!DOCTYPE html>
-<html>
+<html lang="th">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TESTHUB | Get Key</title>
     <style>
-        body { margin: 0; height: 100vh; display: flex; align-items: center; justify-content: center; 
-               background: linear-gradient(135deg, #00c6ff, #0072ff); color: white; font-family: sans-serif; }
-        .card { background: rgba(0,0,0,0.3); padding: 40px; border-radius: 20px; text-align: center; backdrop-filter: blur(10px); }
-        #key-display { font-size: 24px; font-weight: bold; margin: 20px 0; padding: 10px; background: #fff; color: #0072ff; border-radius: 5px; }
+        /* ตั้งค่าพื้นฐาน */
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #030a16;
+            color: #ffffff;
+            overflow: hidden;
+        }
+
+        /* อนิเมชั่นลายสีฟ้าวิ่งไปมา */
+        .bg-animated {
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200vw;
+            height: 200vh;
+            background: radial-gradient(circle at 50% 50%, rgba(0, 150, 255, 0.15) 0%, transparent 40%),
+                        radial-gradient(circle at 80% 20%, rgba(0, 255, 255, 0.2) 0%, transparent 30%);
+            animation: moveGradient 15s infinite alternate ease-in-out;
+            z-index: 1;
+        }
+        @keyframes moveGradient {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(10%, 15%) scale(1.2); }
+        }
+
+        /* กล่องกระจกสไตล์ UI เท่ๆ */
+        .glass-panel {
+            position: relative;
+            z-index: 2;
+            background: rgba(10, 25, 45, 0.6);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(0, 198, 255, 0.3);
+            border-top: 1px solid rgba(0, 198, 255, 0.6);
+            border-radius: 20px;
+            padding: 40px;
+            width: 90%;
+            max-width: 450px;
+            text-align: center;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(0, 198, 255, 0.1);
+        }
+
+        h1 {
+            margin-top: 0;
+            font-size: 32px;
+            letter-spacing: 2px;
+            color: #00e5ff;
+            text-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
+        }
+
+        /* กล่องแสดงคีย์ใหญ่ๆ */
+        .key-container {
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px dashed #0088ff;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 25px 0;
+            font-size: 28px;
+            font-weight: 900;
+            color: #ffffff;
+            letter-spacing: 3px;
+            text-shadow: 0 0 8px #0088ff;
+        }
+
+        /* เวลาหมดอายุ */
+        .timer-box {
+            font-size: 18px;
+            margin-bottom: 25px;
+            color: #a0c4ff;
+        }
+        .timer-box span {
+            font-size: 26px;
+            font-weight: bold;
+            color: #ff3366;
+            text-shadow: 0 0 10px rgba(255, 51, 102, 0.6);
+            display: block;
+            margin-top: 5px;
+        }
+
+        /* ปุ่มกดคัดลอก */
+        .copy-btn {
+            background: linear-gradient(90deg, #0072ff, #00c6ff);
+            border: none;
+            border-radius: 10px;
+            padding: 15px 0;
+            width: 100%;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 198, 255, 0.4);
+        }
+        .copy-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 198, 255, 0.7);
+        }
+        .copy-btn:active {
+            transform: translateY(1px);
+        }
+
     </style>
 </head>
 <body>
-    <div class="card">
+
+    <div class="bg-animated"></div>
+
+    <div class="glass-panel">
         <h1>TESTHUB KEY</h1>
-        <p>คีย์เปลี่ยนทุก 8 ชั่วโมง</p>
-        <div id="key-display">กำลังโหลด...</div>
-        <p>หมดอายุใน: <span id="timer">--:--:--</span></p>
-        <button onclick="window.location.href='https://linkvertise.com/YOUR_LINK_HERE'">กดเพื่อผ่าน Linkvertise</button>
+        
+        <div class="timer-box">
+            รีเซ็ตคีย์ใหม่ในอีก:
+            <span id="countdown">--:--:--</span>
+        </div>
+
+        <div class="key-container" id="keyDisplay">
+            Loading...
+        </div>
+
+        <button class="copy-btn" id="copyBtn" onclick="copyKey()">📋 คัดลอกคีย์</button>
     </div>
 
     <script>
-        function generateKey() {
-            const interval = 8 * 60 * 60 * 1000;
-            const seed = Math.floor(Date.now() / interval);
-            const key = "TESTHUB-" + btoa(seed).substring(0, 8).toUpperCase();
-            document.getElementById('key-display').innerText = key;
+        let currentKey = "";
+
+        function updateSystem() {
+            const now = new Date();
+            // กำหนดความยาวรอบละ 8 ชั่วโมง (หน่วยมิลลิวินาที)
+            const interval = 8 * 60 * 60 * 1000; 
+            const timeSinceEpoch = now.getTime();
+            
+            // คำนวณว่าตอนนี้อยู่บล็อกเวลาไหน และเวลาบล็อกต่อไปคือตอนไหน
+            const currentBlock = Math.floor(timeSinceEpoch / interval);
+            const nextBlockTime = (currentBlock + 1) * interval;
+            const timeLeft = nextBlockTime - timeSinceEpoch;
+
+            // สร้างคีย์จากเวลาบล็อกปัจจุบัน (รหัสจะเหมือนกันตลอด 8 ชม.)
+            let hash = 0;
+            let str = "TESTHUB_SUPER_SECRET_" + currentBlock;
+            for (let i = 0; i < str.length; i++) {
+                hash = (hash << 5) - hash + str.charCodeAt(i);
+                hash |= 0; 
+            }
+            // แปลงเป็นตัวอักษรและตัวเลข
+            const randomPart = Math.abs(hash).toString(16).toUpperCase().padStart(8, '0');
+            currentKey = "TESTHUB-" + randomPart;
+            document.getElementById("keyDisplay").innerText = currentKey;
+
+            // แปลงเวลาที่เหลือเป็น ชั่วโมง:นาที:วินาที
+            const h = Math.floor((timeLeft / (1000 * 60 * 60)) % 24);
+            const m = Math.floor((timeLeft / 1000 / 60) % 60);
+            const s = Math.floor((timeLeft / 1000) % 60);
+            
+            document.getElementById("countdown").innerText = 
+                String(h).padStart(2, '0') + ":" + 
+                String(m).padStart(2, '0') + ":" + 
+                String(s).padStart(2, '0');
         }
-        generateKey();
-        setInterval(generateKey, 1000);
+
+        // ฟังก์ชันกดปุ่มคัดลอก
+        function copyKey() {
+            navigator.clipboard.writeText(currentKey).then(() => {
+                const btn = document.getElementById("copyBtn");
+                btn.innerText = "✅ คัดลอกคีย์สำเร็จ!";
+                btn.style.background = "linear-gradient(90deg, #00b09b, #96c93d)";
+                
+                // คืนค่าปุ่มกลับไปเหมือนเดิมหลังจาก 2 วินาที
+                setTimeout(() => {
+                    btn.innerText = "📋 คัดลอกคีย์";
+                    btn.style.background = "linear-gradient(90deg, #0072ff, #00c6ff)";
+                }, 2000);
+            });
+        }
+
+        // สั่งให้อัปเดตเวลาและคีย์ทุกๆ 1 วินาที
+        updateSystem();
+        setInterval(updateSystem, 1000);
     </script>
 </body>
 </html>
